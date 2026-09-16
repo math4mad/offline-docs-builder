@@ -1,0 +1,32 @@
+{
+  "applicationId": "io.placeholder.offline.docs",
+  "version": "0.0.0",
+  "defaultUrl": "/resources/index.html",
+  "documentRoot": "/resources/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "modes": {
+    "window": {
+      "title": "Offline Docs",
+      "width": 1280,
+      "height": 800,
+      "minWidth": 800,
+      "minHeight": 600,
+      "fullScreen": false,
+      "alwaysOnTop": false,
+      "icon": "/resources/favicon.png"
+    }
+  },
+  "cli": {
+    "binaryName": "offline-docs",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/resources/neutralino.js"
+  },
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "window.*",
+    "filesystem.*"
+  ]
+}

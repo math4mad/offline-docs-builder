@@ -1,0 +1,35 @@
+libraries:
+  - name: scikit-learn
+    repo: scikit-learn/scikit-learn
+    doc_url: https://scikit-learn.org/stable/
+    doc_source: github_release  # 或 sphinx_build / direct_download
+    version_check: pypi
+    entry_point: index.html
+
+  - name: SciPy
+    repo: scipy/scipy
+    doc_url: https://docs.scipy.org/doc/scipy/
+    doc_source: direct_download
+    version_check: pypi
+    entry_point: index.html
+
+  - name: SymPy
+    repo: sympy/sympy
+    doc_url: https://docs.sympy.org/latest/
+    doc_source: sphinx_build
+    version_check: pypi
+    entry_point: index.html
+
+  - name: NumPy
+    repo: numpy/numpy
+    doc_url: https://numpy.org/doc/stable/
+    doc_source: direct_download
+    version_check: pypi
+    entry_point: index.html
+
+  - name: Matplotlib
+    repo: matplotlib/matplotlib
+    doc_url: https://matplotlib.org/stable/
+    doc_source: sphinx_build
+    version_check: pypi
+    entry_point: index.html

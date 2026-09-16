@@ -1,0 +1,160 @@
+name: Build Offline Docs
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'   # 每周一凌晨4点（UTC）
+  workflow_dispatch:
+    inputs:
+      library:
+        description: '库名（留空则构建全部）'
+        required: false
+        type: string
+      version:
+        description: '指定版本（留空则自动检测最新版）'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PyYAML
+        run: pip install pyyaml
+      - name: Build library matrix
+        id: set-matrix
+        run: |
+          if [ -n "${{ github.event.inputs.library }}" ]; then
+            LIBS="[\"${{ github.event.inputs.library }}\"]"
+          else
+            LIBS=$(python -c "
+          import yaml
+          with open('config/libraries.yaml') as f:
+              data = yaml.safe_load(f)
+          libs = [lib['name'] for lib in data['libraries']]
+          import json; print(json.dumps(libs))
+          ")
+          fi
+          echo "matrix=$LIBS" >> $GITHUB_OUTPUT
+
+  build:
+    needs: detect
+    strategy:
+      fail-fast: false
+      matrix:
+        library: ${{ fromJson(needs.detect.outputs.matrix) }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
+        run: pip install pyyaml requests
+
+      - name: Get version and check release
+        id: version
+        run: |
+          LIBRARY="${{ matrix.library }}"
+          # 从 YAML 中读取该库的配置
+          python -c "
+          import yaml, json, sys
+          with open('config/libraries.yaml') as f:
+              data = yaml.safe_load(f)
+          lib = next(l for l in data['libraries'] if l['name'] == '$LIBRARY')
+          print(json.dumps(lib))
+          " > lib_config.json
+          cat lib_config.json
+
+          # 检测最新版本
+          PYPI_NAME=$(python -c "import json; d=json.load(open('lib_config.json')); print(d['pypi_name'])")
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=$(python scripts/check_version.py "$PYPI_NAME" "$LIBRARY" | grep '::set-output name=version::' | sed 's/.*::set-output name=version:://')
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # 检查是否已发布
+          TAG="${LIBRARY}-v${VERSION}"
+          if gh release view "$TAG" &>/dev/null; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "⏭️ 版本 $TAG 已存在，跳过"
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "🚀 新版本 $TAG，开始构建"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download documentation
+        if: steps.version.outputs.should_build == 'true'
+        run: |
+          LIBRARY="${{ matrix.library }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          python -c "
+          import yaml, json
+          with open('config/libraries.yaml') as f:
+              data = yaml.safe_load(f)
+          lib = next(l for l in data['libraries'] if l['name'] == '$LIBRARY')
+          print(lib.get('doc_source', 'official_zip'))
+          print(lib.get('doc_url', ''))
+          print(lib.get('repo', ''))
+          " > download_args.txt
+          
+          STRATEGY=$(sed -n '1p' download_args.txt)
+          DOC_URL=$(sed -n '2p' download_args.txt)
+          REPO=$(sed -n '3p' download_args.txt)
+          
+          mkdir -p docs_temp
+          python scripts/download_docs.py "$STRATEGY" "$DOC_URL" "$VERSION" "$REPO" docs_temp
+
+      - name: Build Neutralinojs app
+        if: steps.version.outputs.should_build == 'true'
+        run: |
+          LIBRARY="${{ matrix.library }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p artifacts
+          python scripts/build_neutralino.py "$LIBRARY" "$VERSION" docs_temp artifacts
+
+      - name: Upload Artifact
+        if: steps.version.outputs.should_build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.library }}-${{ matrix.os }}-v${{ steps.version.outputs.version }}
+          path: artifacts/
+          retention-days: 5
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Releases
+        run: |
+          python scripts/create_release.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
