@@ -13,8 +13,7 @@
       "minWidth": 800,
       "minHeight": 600,
       "fullScreen": false,
-      "alwaysOnTop": false,
-      "icon": "/resources/favicon.png"
+      "alwaysOnTop": false
     }
   },
   "cli": {

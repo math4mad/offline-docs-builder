@@ -11,6 +11,11 @@ on:
         description: Library version to package
         required: true
         type: string
+      small_doc:
+        description: Use a tiny generated document for packaging experiments
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -65,6 +70,7 @@ jobs:
           PY
 
       - name: Download documentation
+        if: ${{ !inputs.small_doc }}
         continue-on-error: true
         env:
           LIBRARY: ${{ steps.library.outputs.name }}
@@ -73,6 +79,18 @@ jobs:
           REPO: ${{ steps.library.outputs.repo }}
           DOC_URL: ${{ steps.library.outputs.doc_url }}
         run: bash scripts/download-docs.sh "$LIBRARY" "$VERSION" "$STRATEGY" "$REPO" "$DOC_URL"
+
+      - name: Create tiny experiment documentation
+        if: ${{ inputs.small_doc }}
+        run: |
+          mkdir -p resources
+          cat > resources/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head><meta charset="utf-8"><title>Offline Docs Experiment</title></head>
+          <body><h1>Offline Docs Experiment</h1><p>Packaging smoke test.</p></body>
+          </html>
+          HTML
 
       - name: Ensure documentation entry page
         run: |
