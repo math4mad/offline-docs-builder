@@ -120,10 +120,12 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           tag="${LIBRARY}-v${VERSION}"
+          archive="$RUNNER_TEMP/${LIBRARY}-offline-docs-macos-v${VERSION}.zip"
+          ditto -c -k --sequesterRsrc --keepParent artifacts "$archive"
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists; leaving it unchanged."
-            exit 0
+            gh release upload "$tag" "$archive" --clobber
+          else
+            gh release create "$tag" "$archive" \
+              --title "${LIBRARY} Offline Docs v${VERSION}" \
+              --notes "macOS offline documentation build for ${LIBRARY} v${VERSION}."
           fi
-          gh release create "$tag" artifacts/* \
-            --title "${LIBRARY} Offline Docs v${VERSION}" \
-            --notes "macOS offline documentation build for ${LIBRARY} v${VERSION}."
