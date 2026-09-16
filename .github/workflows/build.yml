@@ -33,7 +33,7 @@ jobs:
           node-version: '20'
 
       - name: Install documentation tools
-        run: brew install librsvg
+        run: brew install imagemagick librsvg
 
       - name: Install dependencies
         run: |
