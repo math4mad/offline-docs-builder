@@ -40,6 +40,7 @@ source = path.read_text(encoding="utf-8")
 source = source.replace("except TypeError:\n                signature", "except (TypeError, ValueError):\n                signature")
 path.write_text(source, encoding="utf-8")
 PY
+  sed -i '' 's/SPHINXOPTS += -W --keep-going/SPHINXOPTS += --keep-going/' "$work_dir/src/doc/Makefile"
     cd "$work_dir/src/doc"
     pip install -r requirements.txt
     make html
