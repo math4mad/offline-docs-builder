@@ -40,10 +40,16 @@ source = path.read_text(encoding="utf-8")
 source = source.replace("except TypeError:\n                signature", "except (TypeError, ValueError):\n                signature")
 path.write_text(source, encoding="utf-8")
 PY
-  sed -i '' 's/SPHINXOPTS += -W --keep-going/SPHINXOPTS += --keep-going/' "$work_dir/src/doc/Makefile"
+    sed -i '' 's/SPHINXOPTS += -W --keep-going/SPHINXOPTS += --keep-going/' "$work_dir/src/doc/Makefile"
     cd "$work_dir/src/doc"
     pip install -r requirements.txt
-    make html
+    if ! make html; then
+      if [[ ! -f _build/html/index.html ]]; then
+        echo "Documentation build failed without usable HTML output." >&2
+        exit 1
+      fi
+      echo "Documentation build reported errors; packaging the generated HTML." >&2
+    fi
     cp -R _build/html/. "$OLDPWD/resources/"
     ;;
   *)
