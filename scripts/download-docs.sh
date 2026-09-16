@@ -31,6 +31,15 @@ case $STRATEGY in
       rm -rf "$work_dir/src"
       git clone --depth 1 --branch "${VERSION}" "https://github.com/${REPO}.git" "$work_dir/src"
     fi
+    python - "$work_dir/src/doc/ext/docscrape.py" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+source = path.read_text(encoding="utf-8")
+source = source.replace("except TypeError:\n                signature", "except (TypeError, ValueError):\n                signature")
+path.write_text(source, encoding="utf-8")
+PY
     cd "$work_dir/src/doc"
     pip install -r requirements.txt
     make html
