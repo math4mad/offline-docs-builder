@@ -27,7 +27,10 @@ case $STRATEGY in
     unzip -o "$archive" -d resources/
     ;;
   sphinx_build)
-    git clone --depth 1 --branch "v${VERSION}" "https://github.com/${REPO}.git" "$work_dir/src"
+    if ! git clone --depth 1 --branch "v${VERSION}" "https://github.com/${REPO}.git" "$work_dir/src"; then
+      rm -rf "$work_dir/src"
+      git clone --depth 1 --branch "${VERSION}" "https://github.com/${REPO}.git" "$work_dir/src"
+    fi
     cd "$work_dir/src/doc"
     pip install -r requirements.txt
     make html
