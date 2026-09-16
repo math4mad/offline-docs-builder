@@ -65,6 +65,7 @@ jobs:
           PY
 
       - name: Download documentation
+        continue-on-error: true
         env:
           LIBRARY: ${{ steps.library.outputs.name }}
           VERSION: ${{ inputs.version }}
@@ -72,6 +73,14 @@ jobs:
           REPO: ${{ steps.library.outputs.repo }}
           DOC_URL: ${{ steps.library.outputs.doc_url }}
         run: bash scripts/download-docs.sh "$LIBRARY" "$VERSION" "$STRATEGY" "$REPO" "$DOC_URL"
+
+      - name: Ensure documentation entry page
+        run: |
+          mkdir -p resources
+          if [[ ! -f resources/index.html ]]; then
+            cp templates/index.html resources/index.html
+            echo "Documentation was unavailable; using the fallback entry page."
+          fi
 
       - name: Build macOS application
         env:
